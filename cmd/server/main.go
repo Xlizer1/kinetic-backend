@@ -171,6 +171,16 @@ func main() {
 
 	docs.SwaggerInfo.BasePath = "/api"
 
+	// Configure Swagger host and scheme for production
+	if host := os.Getenv("SWAGGER_HOST"); host != "" {
+		docs.SwaggerInfo.Host = host
+	}
+	if scheme := os.Getenv("SWAGGER_SCHEME"); scheme != "" {
+		docs.SwaggerInfo.Schemes = []string{scheme}
+	} else {
+		docs.SwaggerInfo.Schemes = []string{"https", "http"}
+	}
+
 	r := gin.Default()
 
 	r.Use(middleware.CORSMiddleware())

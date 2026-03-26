@@ -24,5 +24,7 @@ export LIVEKIT_API_KEY=APIRES8Xpqw437u
 export LIVEKIT_API_SECRET=a7VN5rSfbuXHvPsSU8YZ0t67FyEE9kWBVcgOGska6hG
 export LIVEKIT_SERVER_URL=wss://kinetic-66jvnjn7.livekit.cloud
 export GIN_MODE=release
+export SWAGGER_HOST=api.kinetic.kite-app.online
+export SWAGGER_SCHEME=https
 
 exec ./kinetic-server

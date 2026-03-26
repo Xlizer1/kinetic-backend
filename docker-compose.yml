@@ -19,6 +19,8 @@ services:
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-}
       - LIVEKIT_SERVER_URL=${LIVEKIT_SERVER_URL:-}
+      - SWAGGER_HOST=${SWAGGER_HOST:-}
+      - SWAGGER_SCHEME=${SWAGGER_SCHEME:-}
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
