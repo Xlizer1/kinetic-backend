@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"strconv"
+
 	"kinetic-backend/internal/services"
 	"kinetic-backend/internal/utils"
 
@@ -13,6 +15,30 @@ type UserHandler struct {
 
 func NewUserHandler(userService *services.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
+}
+
+// @Summary Get user by ID
+// @Description Returns a user's profile by ID
+// @Tags users
+// @Produce json
+// @Param id path int true "User ID"
+// @Success 200 {object} models.User
+// @Router /users/{id} [get]
+func (h *UserHandler) GetUser(c *gin.Context) {
+	idParam := c.Param("id")
+	userID, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		utils.BadRequest(c, "Invalid user ID")
+		return
+	}
+
+	user, err := h.userService.GetUserByID(uint(userID))
+	if err != nil {
+		utils.NotFound(c, "User not found")
+		return
+	}
+
+	utils.SuccessResponse(c, user)
 }
 
 // @Summary Get current user

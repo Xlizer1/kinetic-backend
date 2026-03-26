@@ -206,6 +206,7 @@ func main() {
 
 		users := api.Group("/users")
 		{
+			users.GET("/:id", userHandler.GetUser)
 			users.GET("/@me", middleware.AuthMiddleware(), userHandler.GetMe)
 			users.PATCH("/@me", middleware.AuthMiddleware(), userHandler.UpdateMe)
 			users.PATCH("/@me/settings", middleware.AuthMiddleware(), userHandler.UpdateSettings)
