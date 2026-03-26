@@ -11,33 +11,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker BuildX
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Get version
-        id: version
-        run: |
-          VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "latest")
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: |
-            xlizer1/kinetic-backend:latest
-            xlizer1/kinetic-backend:${{ steps.version.outputs.VERSION }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1
         with:
@@ -45,24 +18,29 @@ jobs:
           username: root
           key: ${{ secrets.SSH_KEY }}
           script: |
-            mkdir -p /opt/kite/kinetic-backend
-            if [ ! -d /opt/kite/kinetic-backend/.git ]; then
-              git clone git@github.com:Xlizer1/kinetic-backend.git /opt/kite/kinetic-backend
-            fi
             cd /opt/kite/kinetic-backend
+
+            # Install Go 1.26 if not present (first-time only)
+            if [ ! -f /usr/local/go/bin/go ]; then
+              curl -fsSL https://go.dev/dl/go1.26.2.linux-amd64.tar.gz -o /tmp/go.tar
+              tar -C /tmp -xzf /tmp/go.tar
+              rm -rf /usr/local/go
+              mv /tmp/go /usr/local/go
+            fi
+            export PATH=$PATH:/usr/local/go/bin
+
+            # Pull latest code from GitHub
             git fetch origin
             git checkout main
             git pull origin main
-            
-            # Tag current image as previous before pulling new one
-            docker tag xlizer1/kinetic-backend:latest xlizer1/kinetic-backend:previous || true
-            
-            # Pull new image
-            docker compose pull backend
-            
-            # Restart container
-            docker compose rm -f backend 2>/dev/null || true
-            docker compose up -d backend
-            
-            # Clean up old images on VPS (keep latest + previous)
-            docker images --format "{{.Repository}}:{{.Tag}}" | grep "xlizer1/kinetic-backend:" | grep -v "latest\|previous" | tail -n +3 | xargs -r docker rmi || true
+
+            # Download dependencies
+            go mod download
+
+            # Build binary
+            CGO_ENABLED=0 go build -o kinetic-server ./cmd/server
+
+            # Restart the service
+            systemctl restart kinetic
+
+            echo "Deployment complete!"
