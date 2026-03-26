@@ -171,15 +171,20 @@ func main() {
 
 	docs.SwaggerInfo.BasePath = "/api"
 
-	// Configure Swagger host and scheme for production
-	if host := os.Getenv("SWAGGER_HOST"); host != "" {
-		docs.SwaggerInfo.Host = host
+	// Configure Swagger host and scheme for production (defaults set for production)
+	swaggerHost := os.Getenv("SWAGGER_HOST")
+	swaggerScheme := os.Getenv("SWAGGER_SCHEME")
+
+	// If environment variables not set, use production defaults
+	if swaggerHost == "" {
+		swaggerHost = "api.kinetic.kite-app.online"
 	}
-	if scheme := os.Getenv("SWAGGER_SCHEME"); scheme != "" {
-		docs.SwaggerInfo.Schemes = []string{scheme}
-	} else {
-		docs.SwaggerInfo.Schemes = []string{"https", "http"}
+	if swaggerScheme == "" {
+		swaggerScheme = "https"
 	}
+
+	docs.SwaggerInfo.Host = swaggerHost
+	docs.SwaggerInfo.Schemes = []string{swaggerScheme}
 
 	r := gin.Default()
 
