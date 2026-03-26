@@ -1,0 +1,15 @@
+[Unit]
+Description=Kinetic Backend Server
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/kite/kinetic-backend
+ExecStart=/opt/kite/kinetic-backend/start.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
