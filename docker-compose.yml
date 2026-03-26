@@ -1,6 +1,8 @@
 services:
   backend:
-    image: xlizer1/kinetic-backend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: kinetic-backend
     restart: unless-stopped
     environment:
