@@ -29,16 +29,16 @@ func Load() *Config {
 		DBUser:     getEnv("DB_USER", "postgres"),
 		DBPassword: getEnv("DB_PASSWORD", "postgres"),
 		DBName:     getEnv("DB_NAME", "kinetic"),
-		JWTSecret:  getEnv("JWT_SECRET", "REDACTED_SECRET"),
+		JWTSecret:  getEnv("JWT_SECRET", ""),
 		ServerPort: getEnv("SERVER_PORT", "8080"),
 
 		RedisHost:     getEnv("REDIS_HOST", "localhost"),
 		RedisPort:     getEnv("REDIS_PORT", "6379"),
 		RedisPassword: getEnv("REDIS_PASSWORD", ""),
 
-		LiveKitAPIKey:    getEnv("LIVEKIT_API_KEY", "REDACTED_KEY"),
-		LiveKitAPISecret: getEnv("LIVEKIT_API_SECRET", "REDACTED_SECRET"),
-		LiveKitServerURL: getEnv("LIVEKIT_SERVER_URL", "wss://kinetic-66jvnjn7.livekit.cloud"),
+		LiveKitAPIKey:    getEnv("LIVEKIT_API_KEY", ""),
+		LiveKitAPISecret: getEnv("LIVEKIT_API_SECRET", ""),
+		LiveKitServerURL: getEnv("LIVEKIT_SERVER_URL", ""),
 	}
 }
 
