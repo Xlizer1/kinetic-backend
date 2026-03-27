@@ -193,12 +193,15 @@ func (h *Hub) Run() {
 			}
 
 		case joinMsg := <-h.JoinRoom:
+			log.Printf("[Hub] Received JOIN_ROOM for channel %d from user %d", joinMsg.ChannelID, joinMsg.Client.ID)
 			room, ok := h.Rooms[joinMsg.ChannelID]
 			if !ok {
+				log.Printf("[Hub] Creating new room for channel %d", joinMsg.ChannelID)
 				room = NewRoom(joinMsg.ChannelID, "text")
 				h.Rooms[joinMsg.ChannelID] = room
 			}
 			room.Join(joinMsg.Client)
+			log.Printf("[Hub] User %d joined room for channel %d", joinMsg.Client.ID, joinMsg.ChannelID)
 			room.BroadcastMessage(MustMarshal(Event{
 				Type: EventUserJoined,
 				Payload: UserPayload{
@@ -220,10 +223,12 @@ func (h *Hub) Run() {
 			}
 
 		case msg := <-h.SendMessage:
+			log.Printf("[Hub] Received SEND_MESSAGE from user %d in channel %d: %s", msg.Client.ID, msg.ChannelID, msg.Content)
 			if room, ok := h.Rooms[msg.ChannelID]; ok {
+				log.Printf("[Hub] Room found for channel %d, saving message", msg.ChannelID)
 				if h.SaveMessage != nil {
 					if err := h.SaveMessage(msg.ChannelID, msg.Client.ID, msg.Content); err != nil {
-						log.Printf("Error saving message: %v", err)
+						log.Printf("[Hub] Error saving message: %v", err)
 						msg.Client.SendEvent(Event{
 							Type: EventError,
 							Payload: ErrorPayload{
@@ -232,6 +237,7 @@ func (h *Hub) Run() {
 						})
 						continue
 					}
+					log.Printf("[Hub] Message saved successfully")
 				}
 
 				event := Event{
@@ -243,7 +249,11 @@ func (h *Hub) Run() {
 						Username:  msg.Client.Username,
 					},
 				}
+				log.Printf("[Hub] Broadcasting message to room channel %d", msg.ChannelID)
 				room.BroadcastMessage(MustMarshal(event))
+				log.Printf("[Hub] Message broadcast complete")
+			} else {
+				log.Printf("[Hub] ERROR: Room not found for channel %d", msg.ChannelID)
 			}
 
 		case voiceJoinMsg := <-h.VoiceJoin:

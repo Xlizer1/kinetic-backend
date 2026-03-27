@@ -35,10 +35,12 @@ func NewClient(conn *websocket.Conn, hub *Hub) *Client {
 
 func (c *Client) ReadPump() {
 	defer func() {
+		log.Printf("[Client] ReadPump: Client %d (%s) disconnecting", c.ID, c.Username)
 		c.Hub.Unregister <- c
 		c.Conn.Close()
 	}()
 
+	log.Printf("[Client] ReadPump: Starting for client")
 	c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error {
@@ -50,17 +52,19 @@ func (c *Client) ReadPump() {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("WebSocket error: %v", err)
+				log.Printf("[Client] WebSocket error: %v", err)
 			}
 			break
 		}
 
+		log.Printf("[Client] Received message: %s", string(message))
 		var event Event
 		if err := json.Unmarshal(message, &event); err != nil {
-			log.Printf("Error unmarshaling message: %v", err)
+			log.Printf("[Client] Error unmarshaling message: %v", err)
 			continue
 		}
 
+		log.Printf("[Client] Handling event type: %s", event.Type)
 		c.HandleEvent(event)
 	}
 }
@@ -100,7 +104,11 @@ func (c *Client) WritePump() {
 }
 
 func (c *Client) HandleEvent(event Event) {
+	log.Printf("[Client] HandleEvent: received event type = %s", event.Type)
 	switch event.Type {
+	case "PING":
+		log.Printf("[Client] Received PING, sending PONG")
+		c.SendEvent(Event{Type: "PONG", Payload: map[string]interface{}{}})
 	case EventAuthenticate:
 		c.handleAuthenticate(event.Payload)
 	case EventJoinRoom:
@@ -148,23 +156,30 @@ func (c *Client) handleAuthenticate(payload interface{}) {
 }
 
 func (c *Client) handleJoinRoom(payload interface{}) {
+	log.Printf("[Client] handleJoinRoom called for client %d", c.ID)
 	data, ok := payload.(map[string]interface{})
 	if !ok {
+		log.Printf("[Client] handleJoinRoom: Invalid payload type")
 		c.SendError("Invalid join room payload")
 		return
 	}
 
+	log.Printf("[Client] handleJoinRoom: payload = %+v", data)
+
 	channelID, ok := data["channel_id"].(float64)
 	if !ok {
+		log.Printf("[Client] handleJoinRoom: Missing or invalid channel_id")
 		c.SendError("Missing channel_id")
 		return
 	}
 
 	channelIDUint := uint(channelID)
+	log.Printf("[Client] handleJoinRoom: Sending to hub - channel=%d", channelIDUint)
 	c.Hub.JoinRoom <- JoinRoomMessage{
 		Client:    c,
 		ChannelID: channelIDUint,
 	}
+	log.Printf("[Client] handleJoinRoom: Join request sent to hub")
 }
 
 func (c *Client) handleLeaveRoom(payload interface{}) {
@@ -188,29 +203,37 @@ func (c *Client) handleLeaveRoom(payload interface{}) {
 }
 
 func (c *Client) handleSendMessage(payload interface{}) {
+	log.Printf("[Client] handleSendMessage called for client %d", c.ID)
 	data, ok := payload.(map[string]interface{})
 	if !ok {
+		log.Printf("[Client] handleSendMessage: Invalid payload type")
 		c.SendError("Invalid send message payload")
 		return
 	}
 
+	log.Printf("[Client] handleSendMessage: payload = %+v", data)
+
 	channelID, ok := data["channel_id"].(float64)
 	if !ok {
+		log.Printf("[Client] handleSendMessage: Missing or invalid channel_id, type = %T", data["channel_id"])
 		c.SendError("Missing channel_id")
 		return
 	}
 
 	content, ok := data["content"].(string)
 	if !ok {
+		log.Printf("[Client] handleSendMessage: Missing content")
 		c.SendError("Missing content")
 		return
 	}
 
+	log.Printf("[Client] handleSendMessage: Sending to hub - channel=%d, content=%s", uint(channelID), content)
 	c.Hub.SendMessage <- SendMessageToHub{
 		Client:    c,
 		ChannelID: uint(channelID),
 		Content:   content,
 	}
+	log.Printf("[Client] handleSendMessage: Message sent to hub")
 }
 
 func (c *Client) handleTypingStart(payload interface{}) {

@@ -3,6 +3,7 @@ package handlers
 import (
 	"strconv"
 
+	"kinetic-backend/internal/realtime"
 	"kinetic-backend/internal/services"
 	"kinetic-backend/internal/utils"
 
@@ -11,10 +12,11 @@ import (
 
 type MessageHandler struct {
 	messageService *services.MessageService
+	hub            *realtime.Hub
 }
 
-func NewMessageHandler(messageService *services.MessageService) *MessageHandler {
-	return &MessageHandler{messageService: messageService}
+func NewMessageHandler(messageService *services.MessageService, hub *realtime.Hub) *MessageHandler {
+	return &MessageHandler{messageService: messageService, hub: hub}
 }
 
 // @Summary Get channel messages
@@ -57,6 +59,7 @@ func (h *MessageHandler) GetMessages(c *gin.Context) {
 // @Router /channels/{id}/messages [post]
 func (h *MessageHandler) CreateMessage(c *gin.Context) {
 	userID := c.GetUint("userID")
+	username := c.GetString("username")
 
 	var input struct {
 		ChannelID uint   `json:"channel_id" binding:"required"`
@@ -75,6 +78,24 @@ func (h *MessageHandler) CreateMessage(c *gin.Context) {
 	if err != nil {
 		utils.BadRequest(c, err.Error())
 		return
+	}
+
+	// Broadcast to WebSocket room
+	if h.hub != nil {
+		event := realtime.Event{
+			Type: realtime.EventNewMessage,
+			Payload: realtime.MessagePayload{
+				ID:        message.ID,
+				ChannelID: message.ChannelID,
+				AuthorID:  message.AuthorID,
+				Content:   message.Content,
+				Username:  username,
+				CreatedAt: message.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			},
+		}
+		if room, ok := h.hub.Rooms[message.ChannelID]; ok {
+			room.BroadcastMessage(realtime.MustMarshal(event))
+		}
 	}
 
 	utils.SuccessResponse(c, message)

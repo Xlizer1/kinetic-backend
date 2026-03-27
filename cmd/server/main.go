@@ -166,7 +166,8 @@ func main() {
 	userHandler := handlers.NewUserHandler(userService)
 	serverHandler := handlers.NewServerHandler(serverService)
 	channelHandler := handlers.NewChannelHandler(channelService)
-	messageHandler := handlers.NewMessageHandler(messageService)
+	messageHandler := handlers.NewMessageHandler(messageService, hub)
+	voiceHandler := handlers.NewVoiceHandler(voiceService, hub)
 	wsHandler := handlers.NewWsHandler(hub)
 
 	docs.SwaggerInfo.BasePath = "/api"
@@ -233,6 +234,9 @@ func main() {
 			channels.GET("/:id/messages", middleware.AuthMiddleware(), messageHandler.GetMessages)
 			channels.POST("/:id/messages", middleware.AuthMiddleware(), messageHandler.CreateMessage)
 			channels.DELETE("/:id/messages/:messageId", middleware.AuthMiddleware(), messageHandler.DeleteMessage)
+			channels.POST("/:id/voice/join", middleware.AuthMiddleware(), voiceHandler.JoinVoice)
+			channels.POST("/:id/voice/leave", middleware.AuthMiddleware(), voiceHandler.LeaveVoice)
+			channels.GET("/:id/voice", middleware.AuthMiddleware(), voiceHandler.GetVoiceUsers)
 		}
 	}
 
@@ -240,7 +244,7 @@ func main() {
 
 	r.GET("/ws", wsHandler.HandleWebSocket)
 
-	addr := fmt.Sprintf(":%s", cfg.ServerPort)
+	addr := fmt.Sprintf("0.0.0.0:%s", cfg.ServerPort)
 	log.Printf("Server starting on %s", addr)
 	log.Printf("Server ID: %s", hub.ServerID)
 	log.Printf("Swagger UI available at http://localhost:%s/swagger/index.html", cfg.ServerPort)

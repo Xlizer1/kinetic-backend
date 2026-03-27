@@ -37,6 +37,17 @@ jobs:
             # Download dependencies
             go mod download
 
+            # Generate Swagger docs
+            go install github.com/swaggo/swag/cmd/swag@v1.8.12
+            export PATH=$PATH:$(go env GOPATH)/bin
+            swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+
+            # Update Swagger JSON with production values
+            sed -i 's/"host": "localhost:8080"/"host": "api.kinetic.kite-app.online"/g' docs/swagger.json
+            sed -i 's/"schemes": \[\]/"schemes": ["https"]/g' docs/swagger.json
+            sed -i 's/"host": "localhost:8080"/"host": "api.kinetic.kite-app.online"/g' docs/docs.go
+            sed -i 's/\[\]string{}/\["https"\]/g' docs/docs.go
+
             # Build binary
             CGO_ENABLED=0 go build -o kinetic-server ./cmd/server
 
